@@ -1,0 +1,4 @@
+data_backup/
+data.sqlite
+__pycache__/
+**/__pycache__/
