@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS sale(
     _shipping_amount DECIMAL(16, 2) DEFAULT 0,
     _total_amount DECIMAL(16, 2) DEFAULT 0,
 
-    -- is_manual_sale BOOLEAN CHECK(is_manual_sale IN (0, 1)) NOT NULL,
-    is_manual BOOLEAN CHECK(is_manual IN (0, 1)) NOT NULL,
+    is_manual_material BOOLEAN CHECK(is_manual_material IN (0, 1)) NOT NULL,
+    is_manual_shipping BOOLEAN CHECK(is_manual_shipping IN (0, 1)) NOT NULL,
     _id_unit_material INTEGER,
     -- FOREIGN KEY(_id_unit_material) REFERENCES unit(id),
     _id_unit_shipping INTEGER,

@@ -11,14 +11,14 @@ from services.dashboardService import DashboardService
 from services.parentService import ParentService
 from services.rateChartService import RateChartService
 from services.accountRefreshService import AccountRefreshService
-from services.util import getUnitId, getorCreateAgentId, getorCreateMaterialShippingId, getorCreateSiteId
+from services.util import getMaterialShippingId, getUnitId, getorCreateAgentId, getorCreateSiteId
 import traceback
 
 
 class SaveToDb(ParentService):
     column_account = ["lookup_id", "account_name",
                       "agent_name", "op_bank", "op_cash"]
-    column_sale = ['date', 'challan_no', 'site', 'account_name', 'material_name', 'qty_cft', 'qty_ton', 'truck_no', 'transporter_name', 'shipping_address', 'bank_sale','bank_received','cash_received', 'remarks', 'is_manual',
+    column_sale = ['date', 'challan_no', 'site', 'account_name', 'material_name', 'qty_cft', 'qty_ton', 'truck_no', 'transporter_name', 'shipping_address', 'bank_sale','bank_received','cash_received', 'remarks', 'is_manual_material', 'is_manual_shipping',
                    'm_material_unit', 'm_material_amount', 'm_shipping_unit', 'm_shipping_amount', 'o_date', 'lookup_account_name', 'lookup_material_name', 'lookup_shipping_address', 'lookup_material_name_rate', 'lookup_shipping_address_rate']
 
     colomn_rate = ["date", "account_name", "material_name", "unit", "amount"]
@@ -43,7 +43,7 @@ class SaveToDb(ParentService):
         #     dashboardService = DashboardService()
         #     dashboardService.getOrCreateAccountId(account_name=account_name)
         # for material_name in materials:
-        #     getorCreateMaterialShippingId(material_name=material_name)
+        #     getMaterialShippingId(material_name=material_name)
 
         dashboardService = DashboardService()
         rateChartService = RateChartService()
@@ -51,12 +51,15 @@ class SaveToDb(ParentService):
         for i, row in self.data.iterrows():
             id_account = dashboardService.getOrCreateAccountId(
                 account_name=str(row["lookup_account_name"]))
-            _id_rate_material = 'NULL'
-            _sale_amount = 0
             id_material = 'NULL'
             if len(row["lookup_material_name"]):
-                id_material = getorCreateMaterialShippingId(
+                id_material = getMaterialShippingId(
                     material_name=str(row["lookup_material_name"]))
+
+            _sale_amount = 0
+            _id_rate_material = 'NULL'
+            m_material_unit = 'NULL'
+            if id_material != 'NULL' and not row["is_manual_material"]:
                 rate_row = rateChartService.getOnebyDateAccountNameMaterialShipping(
                     date=row["date"], account_name=row["lookup_account_name"], material_name=row["lookup_material_name"])
                 _id_rate_material = rate_row[0]
@@ -64,22 +67,32 @@ class SaveToDb(ParentService):
                 _sale_amount = row["qty_ton"] * rate_row[5] if rate_row[4] == "TON" else row["qty_cft"] * \
                     rate_row[5] if rate_row[4] == "CFT" else rate_row[5]
 
+            elif row["is_manual_material"]:
+                _sale_amount = row["m_material_amount"]
+                m_material_unit = getUnitId(unit_name="TON")
          
 
             id_site = getorCreateSiteId(row["site"])
 
-            _id_rate_shipping = "NULL"
-            _shipping_amount = 0
             id_shipping_address = "NULL"
             if len(row["lookup_shipping_address"]):
-                id_shipping_address = getorCreateMaterialShippingId(
+                id_shipping_address = getMaterialShippingId(
                     material_name=str(row["lookup_shipping_address"]))
+
+            _id_rate_shipping = "NULL"
+            _shipping_amount = 0
+            m_shipping_unit = 'NULL'
+            if len(row["lookup_shipping_address"]) and not row["is_manual_shipping"]:
                 rate_row = rateChartService.getOnebyDateAccountNameMaterialShipping(
                     date=row["date"], account_name=row["lookup_account_name"], material_name=row["lookup_shipping_address"])
                 _id_rate_shipping = rate_row[0]
 
                 _shipping_amount = row["qty_ton"] * rate_row[5] if rate_row[4] == "TON" else row["qty_cft"] * \
                     rate_row[5] if rate_row[4] == "CFT" else rate_row[5]
+
+            elif row["is_manual_shipping"]:
+                _shipping_amount = row["m_shipping_amount"]
+                m_shipping_unit = getUnitId(unit_name="TRIP")
 
                
 
@@ -90,51 +103,6 @@ class SaveToDb(ParentService):
             con = getDb()
             db = con.cursor()
             try:
-
-                # cash_received  = 0
-                # print(row["cash_received"])
-                # if len(row["cash_received"]):
-                #     cash_received = int(row["cash_received"])
-
-                # id_unit = getUnitId(unit_name=str(row["unit"]).upper())
-
-                # db.execute(f"""
-                # INSERT INTO sale
-                #     (date_,
-                #     challan_no,
-                #     id_site,
-                #     id_account,
-                #     id_material,
-                #     qty_cft,
-                #     qty_ton,
-                #     truck_no,
-                #     transporter_name,
-                #     shipping_address,
-                #     cash_received,
-                #     remarks
-                # --    _id_rate_material,
-                # --    _sale_amount,
-                # --    _id_rate_shipping,
-                # --    _shipping_amount,
-                # --    _total_amount,
-                # --    is_manual,
-                # --    _id_unit_material,
-                # --    _id_unit_shipping
-                #     )
-                # VALUES(
-                #     '{row["date"]}',
-                #     '{row['challan_no']}',
-                #     {id_site},
-                #     {id_account},
-                #     {id_material},
-                #     {row["qty_cft"]},
-                #     {row["qty_ton"]},
-                #     '{row["truck_no"]}',
-                #     '{row["transporter_name"]}',
-                #     {id_shipping_address},
-                #     {row["cash_received"]},
-                #     '{row["remarks"]}'
-                #     )""")
 
                 print(f"""
                 INSERT INTO sale
@@ -157,7 +125,11 @@ class SaveToDb(ParentService):
                     bank_sale,
                     bank_received,
                     cash_received,
-                    is_manual )
+                    is_manual_material,
+                    _id_unit_material,
+                    is_manual_shipping,
+                    _id_unit_shipping
+                     )
                 VALUES(
                     {d.toordinal()},
                     '{row['challan_no']}',
@@ -178,7 +150,10 @@ class SaveToDb(ParentService):
                     {row["bank_sale"]},
                     {row["bank_received"]},
                     {row["cash_received"]},
-                    {int(row["is_manual"])}
+                    {int(row["is_manual_material"])},
+                    {m_material_unit},
+                    {int(row["is_manual_shipping"])},
+                    {m_shipping_unit}
                     )""")
 
                 db.execute(f"""
@@ -202,7 +177,11 @@ class SaveToDb(ParentService):
                     bank_sale,
                     bank_received,
                     cash_received,
-                    is_manual )
+                    is_manual_material,
+                    _id_unit_material,
+                    is_manual_shipping,
+                    _id_unit_shipping
+                     )
                 VALUES(
                     {d.toordinal()},
                     '{row['challan_no']}',
@@ -223,7 +202,10 @@ class SaveToDb(ParentService):
                     {row["bank_sale"]},
                     {row["bank_received"]},
                     {row["cash_received"]},
-                    {int(row["is_manual"])}
+                    {int(row["is_manual_material"])},
+                    {m_material_unit},
+                    {int(row["is_manual_shipping"])},
+                    {m_shipping_unit}
                     )""")
                 
             except:
@@ -291,12 +273,12 @@ class SaveToDb(ParentService):
             dashboardService = DashboardService()
             dashboardService.getOrCreateAccountId(account_name=account_name)
         for material_name in materials:
-            getorCreateMaterialShippingId(material_name=material_name)
+            getMaterialShippingId(material_name=material_name)
 
         for i, row in self.data.iterrows():
             id_account = dashboardService.getOrCreateAccountId(
                 account_name=str(row["account_name"]))
-            id_material = getorCreateMaterialShippingId(
+            id_material = getMaterialShippingId(
                 material_name=str(row["material_name"]))
             id_unit = getUnitId(unit_name=str(row["unit"]).upper())
             con = getDb()
@@ -323,6 +305,8 @@ class SaveToDb(ParentService):
         return True
 
     def validateSaleRegistor(self):
+        if self.data["op_bank","op_cash","lookup_id","account_name"].isnull().sum() > 0:
+            return 0
         return (self.data.columns.to_list() == self.column_sale)
 
     def validateAccount(self):

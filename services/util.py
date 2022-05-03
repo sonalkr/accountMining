@@ -41,14 +41,17 @@ def getListOfAgentName() -> int:
     return row
 
 
-def getorCreateMaterialShippingId(material_name) -> int:
+def getorCreateMaterialShippingId(is_material, material_name) -> int:
     con = getDb()
     db = con.cursor()
     db.execute(f"select id from material where material_name = '{material_name}' COLLATE NOCASE;")
     row = db.fetchone()
     id = 0
     if(row == None):
-        db.execute(f"INSERT INTO material (material_name) VALUES('{str(material_name).upper()}')")
+        if is_material:
+            db.execute(f"INSERT INTO material (typeof, material_name) VALUES('material','{str(material_name).upper()}')")
+        else:
+            db.execute(f"INSERT INTO material (typeof, material_name) VALUES('shipping_address','{str(material_name).upper()}')")
         id = db.lastrowid
         con.commit()
     else:
@@ -56,6 +59,19 @@ def getorCreateMaterialShippingId(material_name) -> int:
         id = row[0]
     con.close()
     return id
+
+def getMaterialShippingId( material_name) -> int:
+    con = getDb()
+    db = con.cursor()
+    db.execute(f"select id from material where material_name = '{material_name}' COLLATE NOCASE;")
+    row = db.fetchone()
+    id = 0
+    if row != None:
+        con.close()
+        id = row[0]
+    con.close()
+    return id
+
 
 def getorCreateSiteId(site_name) -> int:
     con = getDb()
@@ -86,7 +102,7 @@ def getMaterialShippingId(material_name) -> int:
     con.close()
     return id
 
-def getMaterialNameById(id_material) -> int:
+def getMaterialShippingNameById(id_material) -> int:
     con = getDb()
     db = con.cursor()
     db.execute(f"select material_name from material where id = '{id_material}';")
@@ -163,6 +179,26 @@ def getListOfIDMaterialName():
     try:
         db.execute(f"""
             SELECT id, material_name FROM material
+            WHERE typeof = "material"
+            ORDER BY
+                material_name ASC
+        """)
+        row = db.fetchall()
+    except:
+        con.close()
+        traceback.print_exc()
+        return list()
+    con.commit()
+    con.close()
+    return row
+
+def getListOfIDShippingAddress():
+    con = getDb()
+    db = con.cursor()
+    try:
+        db.execute(f"""
+            SELECT id, material_name FROM material
+            WHERE typeof = "shipping_address"
             ORDER BY
                 material_name ASC
         """)

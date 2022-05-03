@@ -112,7 +112,38 @@ class RateChartService():
     
     def create(self,date,account_name, material_name, unit_name, amount):
         id_account = self.dashboardService.getOrCreateAccountId(account_name=account_name)
-        id_material = getorCreateMaterialShippingId(material_name=material_name)
+        id_material = getorCreateMaterialShippingId(is_material=True, material_name=material_name)
+        id_unit = getUnitId(unit_name=str(unit_name).upper())
+        con = getDb()
+        db = con.cursor()
+        print(date)
+        d = datetime.strptime(date, "%d-%b-%Y")
+        id = 0
+
+        try:
+            if not id_account and not id_material and not id_unit:
+                raise Exception
+
+            db.execute(f"""INSERT INTO rate
+                (date_, id_account, id_material, id_unit, amount)
+                    VALUES(
+                        {d.toordinal()},
+                        {id_account},
+                        {id_material},
+                        {id_unit},
+                        {amount})""")
+            id = db.lastrowid
+        except:
+            con.close()
+            traceback.print_exc()
+            return False 
+        con.commit() 
+        con.close()
+        return id
+
+    def createWithShipping(self,date,account_name, material_name, unit_name, amount):
+        id_account = self.dashboardService.getOrCreateAccountId(account_name=account_name)
+        id_material = getorCreateMaterialShippingId(is_material=False, material_name=material_name)
         id_unit = getUnitId(unit_name=str(unit_name).upper())
         con = getDb()
         db = con.cursor()

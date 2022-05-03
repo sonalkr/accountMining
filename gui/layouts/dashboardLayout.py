@@ -99,6 +99,10 @@ class DashboardLayout(BaseLayout):
 
         sheet_scroll.config(command=self.sheet.yview)
 
+        self.sheet.tag_configure('even', background='#dbcced')
+        self.sheet.tag_configure('odd', background='#d8edec')
+        self.sheet.tag_configure('bottom', background='#80aaff')
+
         self.sheet.column("#0", width=0, stretch=tk.NO)
         self.sheet.column("id", width=0, stretch=tk.NO)
         self.sheet.column("lookup_id", anchor=tk.E, width=60)
@@ -129,9 +133,14 @@ class DashboardLayout(BaseLayout):
         self.sheet.heading("_cl_total", text="CL Total")
         self.sheet.heading("agent_name", text="Agent Name")
 
-        for row in rows:
+        for i, row in enumerate(rows):
+            tag = ""
+            if i % 2 == 0:
+                tag = "even"
+            else :
+                tag = "odd"
             self.sheet.insert('', tk.END, values=(row[0], row[1], row[2], zeroCurrencyFormat(row[3]), zeroCurrencyFormat(row[4]), zeroCurrencyFormat(row[5]), zeroCurrencyFormat(
-                row[6]), zeroCurrencyFormat(row[7]), zeroCurrencyFormat(row[8]), zeroCurrencyFormat(row[9]), zeroCurrencyFormat(row[10]), zeroCurrencyFormat(row[11]), zeroCurrencyFormat(row[12]), row[13]))
+                row[6]), zeroCurrencyFormat(row[7]), zeroCurrencyFormat(row[8]), zeroCurrencyFormat(row[9]), zeroCurrencyFormat(row[10]), zeroCurrencyFormat(row[11]), zeroCurrencyFormat(row[12]), row[13]), tags=(tag))
         
         self.sheet.bind("<Double-Button-1>", self._navigateToPartyLedger)
 

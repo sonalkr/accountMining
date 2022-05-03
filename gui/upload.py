@@ -18,7 +18,7 @@ from services.dashboardService import DashboardService
 from services.rateChartService import RateChartService
 # from gui.app import App
 from services.saveToDb import SaveToDb
-from services.util import createAccountLookup, createMaterialLookup, getListOfIDMaterialName, getorCreateMaterialShippingId, verifyAccountLookup, verifyMaterialAndShippingLookup
+from services.util import createAccountLookup, createMaterialLookup, getListOfIDMaterialName, getListOfIDShippingAddress, getorCreateMaterialShippingId, verifyAccountLookup, verifyMaterialAndShippingLookup
 from tkcalendar import Calendar, DateEntry
 
 
@@ -114,8 +114,8 @@ class Upload():
     def _advanceRead(self):
         self.__data[["material_name", "truck_no", "transporter_name", "shipping_address", "remarks", "m_material_unit", "m_shipping_unit"]] = self.__data[[
             "material_name", "truck_no", "transporter_name", "shipping_address", "remarks", "m_material_unit", "m_shipping_unit"]].fillna("")
-        self.__data[["qty_cft", "qty_ton", "bank_sale","bank_received","cash_received", "is_manual", "m_material_amount", "m_shipping_amount"]] = self.__data[[
-            "qty_cft", "qty_ton", "bank_sale","bank_received","cash_received", "is_manual", "m_material_amount", "m_shipping_amount"]].fillna(0)
+        self.__data[["qty_cft", "qty_ton", "bank_sale","bank_received","cash_received", "is_manual_material", "is_manual_shipping", "m_material_amount", "m_shipping_amount"]] = self.__data[[
+            "qty_cft", "qty_ton", "bank_sale","bank_received","cash_received","is_manual_material", "is_manual_shipping", "m_material_amount", "m_shipping_amount"]].fillna(0)
         self.__data['o_date'] = pd.to_datetime(self.__data["date"])
         self.__data.sort_values(by="o_date", inplace=True)
         self.__data['lookup_account_name'] = ""
@@ -140,7 +140,7 @@ class Upload():
     def _createSaleSheet(self):
         head_columns = ("id", "date_", "challan_no", "site", "account_name", "lookup_account_name", "material_name", "lookup_material_name",
                         "qty_cft", "qty_ton", "truck_no", "transporter_name", "shipping_address", "lookup_shipping_address", 'bank_sale','bank_received','cash_received', "remarks", "lookup_material_name_rate", "lookup_shipping_address_rate")
-        body_columns = ("id", "is_manual", "m_material_unit",
+        body_columns = ("id", "is_manual_material", "is_manual_shipping", "m_material_unit",
                         "m_material_amount", "m_shipping_unit", "m_shipping_amount")
 
         save_btn = tk.Button(self.toolBar, text="Lookup",
@@ -265,11 +265,11 @@ class Upload():
             print("runing self._lookupShippingAddress()")
             self._lookupShippingAddress()
 
-        elif material_data['lookup_material_name_rate'].eq("").sum():
+        elif material_data['lookup_material_name_rate'].eq("").sum() and len(self._getMaterialRateLookupListFromDF()):
             print("runing self._lookupMaterialRate()")
             self._lookupMaterialRate()
 
-        elif shipping_data['lookup_shipping_address_rate'].eq("").sum():
+        elif shipping_data['lookup_shipping_address_rate'].eq("").sum() and len(self._getShippingRateLookupListFromDF()):
             print("runing self._lookupShippingRate()")
             self._lookupShippingRate()
 
@@ -409,7 +409,7 @@ class Upload():
 
         sheet_scroll.config(command=self.lookupSheet1.yview)
 
-        rows = getListOfIDMaterialName()  # same for shipping address
+        rows = getListOfIDShippingAddress()  # same for shipping address
 
         self.lookupSheet1.column("#0", width=0, stretch=tk.NO)
         self.lookupSheet1.column("id", width=0, stretch=tk.NO)
@@ -546,7 +546,7 @@ class Upload():
                 lookup_from=lookup_from1, replace=selected_values1[1])
 
         elif(type_of_lookup == "material_name" and not is_selected):
-            id = getorCreateMaterialShippingId(material_name=lookup_from1)
+            id = getorCreateMaterialShippingId(is_material=True,material_name=lookup_from1)
             createMaterialLookup(
                 id_material=id, lookup_material_name=lookup_from1)
             self._refreshMaterialNameData(
@@ -559,7 +559,7 @@ class Upload():
                 lookup_from=lookup_from1, replace=selected_values1[1])
 
         elif(type_of_lookup == "shipping_address" and not is_selected):
-            id = getorCreateMaterialShippingId(material_name=lookup_from1)
+            id = getorCreateMaterialShippingId(is_material=False,material_name=lookup_from1)
             createMaterialLookup(
                 id_material=id, lookup_material_name=lookup_from1)
             self._refreshMaterialNameData(
@@ -579,7 +579,7 @@ class Upload():
             self.rateChartSerivce.create(
                 date, account_name=account_name, material_name=material_name, unit_name=unit_name, amount=amount)
         elif(type_of_lookup == "shipping_rate" and not is_manual):
-            self.rateChartSerivce.create(
+            self.rateChartSerivce.createWithShipping(
                 date, account_name=account_name, material_name=material_name, unit_name=unit_name, amount=amount)
         self._refreshAllData()
 
@@ -691,14 +691,17 @@ class Upload():
     def _getShippingRateLookupListFromDF(self):
         return self._getRateLookupListFromDF("shipping_address")
 
-    def _getRateLookupListFromDF(self, arg):
+    def _getRateLookupListFromDF(self, arg:str):
 
         rate_df = self.__data[~self.__data[f'lookup_{arg}'].eq(
             "") & ~self.__data[f'lookup_account_name'].eq("")]
         rate_df = rate_df[rate_df[f'lookup_{arg}_rate'].eq(
             "")]
+        col_name = arg.split("_")[0]
+        rate_df = rate_df[rate_df[f"is_manual_{col_name}"] == 0]
         rate_df = rate_df.drop_duplicates(
             subset=["lookup_account_name", f"lookup_{arg}"])
+        rate_df = rate_df.sort_values(by="lookup_account_name")
         rate_df = rate_df[["lookup_account_name", f"lookup_{arg}", "date"]]
         lookup_list = rate_df.values
         return lookup_list

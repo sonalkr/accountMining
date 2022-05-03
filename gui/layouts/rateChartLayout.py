@@ -57,6 +57,7 @@ class RateChartLayout(BaseLayout):
         )
         b3.pack(side=tk.LEFT, padx=0, pady=0)
 
+
         b4 = tk.Button(
             toolbar,
             text="Create Material / Shipping",
@@ -106,6 +107,10 @@ class RateChartLayout(BaseLayout):
 
         sheet_scroll.config(command=self.sheet.yview)
 
+        self.sheet.tag_configure('even', background='#dbcced')
+        self.sheet.tag_configure('odd', background='#d8edec')
+        self.sheet.tag_configure('bottom', background='#80aaff')
+
         self.sheet.column("#0", width=0, stretch=tk.NO)
         self.sheet.column("id", width=0, stretch=tk.NO)
         self.sheet.column("date_", anchor=tk.E, width=60)
@@ -121,9 +126,15 @@ class RateChartLayout(BaseLayout):
         self.sheet.heading("amount", text="Amount")
         
         
-        for row in rows:
+        for i, row in enumerate(rows):
             date = datetime.fromordinal(row[1])
-            self.sheet.insert('', tk.END, values=(row[0],date.strftime("%d-%b-%Y"),row[2],row[3],row[4],blankCurrencyFormat(row[5])))
+            tag = ""
+            if i % 2 == 0:
+                tag = "even"
+            else :
+                tag = "odd"
+
+            self.sheet.insert('', tk.END, values=(row[0],date.strftime("%d-%b-%Y"),row[2],row[3],row[4],blankCurrencyFormat(row[5])), tags=(tag))
 
         self.sheet.bind("<Double-Button-1>", self._navigateToPartyLedger)
         # self.sheet.bind("<ButtonRelease-1>", self.select_record)
@@ -139,15 +150,19 @@ class RateChartLayout(BaseLayout):
         self.__selected_values = self.sheet.item(selected, 'values')
 
     def _createCreateMaterialShippingFrame(self):
-        self._selectRecord()
         self.editorFrame = tk.Toplevel()
         self.editorFrame.grab_set()
         self.editorFrame.minsize(300, 300)
-        account_name_list = getListOfMaterialName()
+        # account_name_list = getListOfMaterialName()
         self.editor_entries = []
-        account_name_list = list(chain.from_iterable(account_name_list))
+        # account_name_list = list(chain.from_iterable(account_name_list))
+        entry0 = ttk.Combobox(self.editorFrame, values=["material", "shipping address"] )
+        entry0.current(0)
+        entry0.grid(row=0, column=0, padx=10, pady=10)
+        self.editor_entries.append(entry0)
+        
         entry = tk.Entry(self.editorFrame)
-        entry.grid(row=0, column=0, padx=10, pady=10)
+        entry.grid(row=1, column=0, padx=10, pady=10)
         self.editor_entries.append(entry)
         save_btn = tk.Button(self.editorFrame,
                              text="Add", command=self._createMaterialShipping)
@@ -292,8 +307,10 @@ class RateChartLayout(BaseLayout):
                 row=len(self.editor_entries), column=0)
 
     def _createMaterialShipping(self):
+        is_material = self.editor_entries[0].get() == "material"
         getorCreateMaterialShippingId(
-            material_name=self.editor_entries[0].get())
+            is_material,
+            material_name=self.editor_entries[1].get())
         self.editorFrame.grab_release()
         self.editorFrame.destroy()
         self.rootApp.updateAllLayout()

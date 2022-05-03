@@ -88,7 +88,7 @@ class PartyLayout(BaseLayout):
 
         id_account_name = self.dashboardService.getIdByAccountName(account_name=self.account_name)
         rows, col = self.saleRegistorService.getForLayoutIdAccount(id_account_name=id_account_name)
-        head_columns = ('id', 'date_', 'site_name', 'account_name', 'qty_cft', 'qty_ton', 'truck_no', 'transporter_name', 'shipping_address', '_total_amount', '_total_received')
+        head_columns = ('id', 'date_', 'site_name', 'account_name', 'qty_cft', 'qty_ton', 'truck_no', 'transporter_name', '_total_amount', '_total_received')
         chlid_columns = ('_sale_amount', '_shipping_amount', 'bank_sale', 'bank_received', 'cash_received', 'm_rate', 'm_unit', 's_rate', 'u_unit')
 
         self.data = pd.DataFrame(rows, columns=col)
@@ -109,8 +109,8 @@ class PartyLayout(BaseLayout):
 
         sheet_scroll.config(command=self.sheet.yview)
 
-        self.sheet.tag_configure('even', background='#DFDFDF')
-        self.sheet.tag_configure('odd', background='#E8E8E8')
+        self.sheet.tag_configure('even', background='#dbcced')
+        self.sheet.tag_configure('odd', background='#d8edec')
         self.sheet.tag_configure('bottom', background='#80aaff')
 
 
@@ -123,7 +123,6 @@ class PartyLayout(BaseLayout):
         self.sheet.column('qty_ton', anchor=tk.E, width=80)
         self.sheet.column('truck_no', anchor=tk.E, width=80)
         self.sheet.column('transporter_name', anchor=tk.E, width=80)
-        self.sheet.column('shipping_address', anchor=tk.E, width=80)
         self.sheet.column('_total_amount', anchor=tk.E, width=80)
         self.sheet.column('_total_received', anchor=tk.E, width=80)
 
@@ -134,22 +133,26 @@ class PartyLayout(BaseLayout):
         self.sheet.heading('qty_ton', text="QTY TON")
         self.sheet.heading('truck_no', text="Vehicle No")
         self.sheet.heading('transporter_name', text="Transporter")
-        self.sheet.heading('shipping_address', text="Shipping Address")
         self.sheet.heading('_total_amount', text="Total Sale")
         self.sheet.heading('_total_received', text="Total Received")
 
         self.sheet.insert('', tk.END ,values=('', '', '', '', blankCurrencyFormat(self.data["qty_cft"].sum()), blankCurrencyFormat(self.data["qty_ton"].sum()), '', '', '', blankCurrencyFormat(self.data["_total_amount"].sum()), blankCurrencyFormat(self.data["cash_received"].sum()+self.data["bank_received"].sum())), tags=('bottom'))
 
         for i, row in self.data.iterrows():
+            tag = ""
             # print(row["s_unit"])
-        
-            self.sheet.insert('', tk.END, iid=str(row['id']), open=True, values=(row['account_name'],datetime.fromordinal(row['date_']).strftime("%d-%b-%Y"), noneToBlank(row['site_name']), noneToBlank(row['account_name']),  noneToBlank(row['qty_cft']), noneToBlank(row['qty_ton']), noneToBlank(row['truck_no']), noneToBlank(row['transporter_name']), noneToBlank(row['shipping_address']), blankCurrencyFormat(row['_total_amount']), blankCurrencyFormat(row['cash_received']+row['bank_received'])))
+            if i % 2 == 0:
+                tag = "even"
+            else :
+                tag = "odd"
+
+            self.sheet.insert('', tk.END, iid=str(row['id']), open=True, values=(row['account_name'],datetime.fromordinal(row['date_']).strftime("%d-%b-%Y"), noneToBlank(row['site_name']), noneToBlank(row['account_name']),  noneToBlank(row['qty_cft']), noneToBlank(row['qty_ton']), noneToBlank(row['truck_no']), noneToBlank(row['transporter_name']), blankCurrencyFormat(row['_total_amount']), blankCurrencyFormat(row['cash_received']+row['bank_received'])), tags=(tag))
             if row['material_name']:
-                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['account_name'], '', '', row['material_name'], f"{blankCurrencyFormat(row['m_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_sale_amount"]), '', '', '', ''))
+                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['account_name'], '',  row['material_name'], f"{blankCurrencyFormat(row['m_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_sale_amount"]), '', '', '', ''), tags=(tag))
             if row['shipping_address']:
-                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['account_name'], '', '', row['shipping_address'], f"{blankCurrencyFormat(row['s_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_shipping_amount"]), '', '', '', ''))
+                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['account_name'], '',  row['shipping_address'], f"{blankCurrencyFormat(row['s_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_shipping_amount"]), '', '', '', ''), tags=(tag))
             if row['bank_sale']:
-                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['account_name'], '', '', "GST Sale", '', blankCurrencyFormat(row["bank_sale"]), '', '', '', ''))
+                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['account_name'], '', "GST Sale", '', blankCurrencyFormat(row["bank_sale"]), '', '', '', ''), tags=(tag))
         # self.sheet.bind("<ButtonRelease-1>", self.select_record)
 
 
@@ -168,6 +171,8 @@ class PartyLayout(BaseLayout):
         material_sheet.pack(expand=1, fill=tk.Y)
 
         material_pivot_scroll.config(command=material_sheet.yview)
+        material_sheet.tag_configure('even', background='#dbcced')
+        material_sheet.tag_configure('odd', background='#d8edec')
         material_sheet.tag_configure('bottom', background='#80aaff')
 
 
@@ -185,12 +190,16 @@ class PartyLayout(BaseLayout):
         material_sheet.heading('shipping_amount',text='shipping_amount')
         sum_r = [0,0,0,0,0]
         for i , r in enumerate(row2):
+            if i % 2 == 0:
+                tag = "even"
+            else :
+                tag = "odd"
             print(r)
             sum_r[1] += float(r[1])
             sum_r[2] += float(r[2])
             sum_r[3] += float(r[3])
             sum_r[4] += float(r[4])
-            material_sheet.insert('', tk.END ,values=(r[0],blankCurrencyFormat(r[1]),blankCurrencyFormat(r[2]),blankCurrencyFormat(r[3]),blankCurrencyFormat(r[4])))
+            material_sheet.insert('', tk.END ,values=(r[0],blankCurrencyFormat(r[1]),blankCurrencyFormat(r[2]),blankCurrencyFormat(r[3]),blankCurrencyFormat(r[4])),tags=(tag))
 
         material_sheet.insert('', tk.END ,values=("Total",blankCurrencyFormat(sum_r[1]),blankCurrencyFormat(sum_r[2]),blankCurrencyFormat(sum_r[3]),blankCurrencyFormat(sum_r[4])), tags=("bottom"))
 

@@ -101,6 +101,10 @@ class SaleRegistorLayout(BaseLayout):
 
         sheet_scroll.config(command=self.sheet.yview)
 
+        self.sheet.tag_configure('even', background='#dbcced')
+        self.sheet.tag_configure('odd', background='#d8edec')
+        self.sheet.tag_configure('bottom', background='#80aaff')
+
         self.sheet.column("#0", width=0, stretch=tk.NO)
         self.sheet.column("id", width=0, stretch=tk.NO)
         self.sheet.column("_account_name", width=0, stretch=tk.NO)
@@ -130,14 +134,20 @@ class SaleRegistorLayout(BaseLayout):
 
         for i, row in self.data.iterrows():
             # print(row["s_unit"])
+            tag = ""
+            # print(row["s_unit"])
+            if i % 2 == 0:
+                tag = "even"
+            else :
+                tag = "odd"
 
-            self.sheet.insert('', tk.END, iid=str(row['id']), open=True, values=(row['id'],row['account_name'],datetime.fromordinal(row['date_']).strftime("%d-%b-%Y"), noneToBlank(row['site_name']), noneToBlank(row['account_name']),  noneToBlank(row['qty_cft']), noneToBlank(row['qty_ton']), noneToBlank(row['truck_no']), noneToBlank(row['transporter_name']), noneToBlank(row['shipping_address']), blankCurrencyFormat(row['_total_amount']), blankCurrencyFormat(row['cash_received']+row['bank_received'])))
+            self.sheet.insert('', tk.END, iid=str(row['id']), open=True, values=(row['id'],row['account_name'],datetime.fromordinal(row['date_']).strftime("%d-%b-%Y"), noneToBlank(row['site_name']), noneToBlank(row['account_name']),  noneToBlank(row['qty_cft']), noneToBlank(row['qty_ton']), noneToBlank(row['truck_no']), noneToBlank(row['transporter_name']),  blankCurrencyFormat(row['_total_amount']), blankCurrencyFormat(row['cash_received']+row['bank_received'])), tags=(tag))
             if row['material_name']:
-                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['id'],row['account_name'], '', '', row['material_name'], f"{blankCurrencyFormat(row['m_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_sale_amount"]), '', '', '', ''))
+                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['id'],row['account_name'], '', row['material_name'], f"{blankCurrencyFormat(row['m_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_sale_amount"]), '', '', '', ''), tags=(tag))
             if row['shipping_address']:
-                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['id'],row['account_name'], '', '', row['shipping_address'], f"{blankCurrencyFormat(row['s_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_shipping_amount"]), '', '', '', ''))
+                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['id'],row['account_name'], '',  row['shipping_address'], f"{blankCurrencyFormat(row['s_rate'])} / {row['m_unit']}", blankCurrencyFormat(row["_shipping_amount"]), '', '', '', ''), tags=(tag))
             if row['bank_sale']:
-                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['id'],row['account_name'], '', '', "GST Sale", '', blankCurrencyFormat(row["bank_sale"]), '', '', '', ''))
+                self.sheet.insert(str(row['id']), tk.END, open=True, values=(row['id'],row['account_name'], '', "GST Sale", '', blankCurrencyFormat(row["bank_sale"]), '', '', '', ''), tags=(tag))
         # self.sheet.bind("<ButtonRelease-1>", self.select_record)
 
         self.sheet.bind("<Double-Button-1>", self._navigateToPartyLedger)
